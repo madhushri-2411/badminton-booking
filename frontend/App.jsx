@@ -1,92 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState } from "react";
+import axios from "axios";
 
-const API_BASE = 'https://YOUR-BACKEND-URL.onrender.com'; // update when deployed
+const App = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    court: 1,
+    date: "",
+    startTime: 14,
+    endTime: 15,
+  });
+  const [status, setStatus] = useState("");
 
-function App() {
-  const [date, setDate] = useState('');
-  const [availability, setAvailability] = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', court: '', time: '' });
-  const [message, setMessage] = useState('');
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  useEffect(() => {
-    if (date) {
-      axios.get(`${API_BASE}/availability?date=${date}`).then(res => {
-        setAvailability(res.data);
-        setSelectedSlot(null);
-      });
-    }
-  }, [date]);
-
-  const handleBooking = async () => {
-    if (!form.name || !form.email || !form.court || !form.time || !date) {
-      setMessage('Please fill all fields');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.endTime <= formData.startTime) {
+      setStatus("End time must be after start time.");
       return;
     }
     try {
-      const res = await axios.post(`${API_BASE}/book`, {
-        ...form,
-        date,
-      });
-      setMessage('Booking successful!');
-      setForm({ name: '', email: '', court: '', time: '' });
-      setSelectedSlot(null);
-      setDate('');
-    } catch (err) {
-      setMessage(err.response?.data?.error || 'Error booking court');
+      const response = await axios.post("https://badminton-booking-qza0.onrender.com/book", formData);
+      setStatus(response.data.message || "Booking successful!");
+    } catch (error) {
+      setStatus(error.response?.data?.error || "Booking failed.");
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 font-sans">
-      <h1 className="text-2xl font-bold mb-4 text-center">Indian Association Hall - Court Booking</h1>
-
-      <label className="block mb-2 font-semibold">Select Date</label>
-      <input type="date" className="border p-2 mb-4 w-full" value={date} onChange={e => setDate(e.target.value)} />
-
-      {availability.length > 0 && (
-        <div>
-          <h2 className="font-semibold mb-2">Available Slots:</h2>
-          {availability.map(slot => (
-            <div key={slot.time} className="mb-2">
-              <strong>{slot.time}</strong>:
-              {slot.availableCourts.length > 0 ? (
-                slot.availableCourts.map(court => (
-                  <button
-                    key={court}
-                    className={`ml-2 px-3 py-1 border rounded ${selectedSlot?.time === slot.time && selectedSlot?.court === court ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
-                    onClick={() => {
-                      setSelectedSlot({ court, time: slot.time });
-                      setForm({ ...form, court, time: slot.time });
-                    }}
-                  >
-                    {court}
-                  </button>
-                ))
-              ) : (
-                <span className="text-red-500 ml-2">Fully booked</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selectedSlot && (
-        <div className="mt-4">
-          <label className="block mb-1">Your Name</label>
-          <input type="text" className="border p-2 w-full mb-2" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-
-          <label className="block mb-1">Your Email</label>
-          <input type="email" className="border p-2 w-full mb-2" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-
-          <button onClick={handleBooking} className="bg-green-600 text-white px-4 py-2 rounded mt-2">Confirm Booking</button>
-        </div>
-      )}
-
-      {message && <div className="mt-4 text-blue-700 font-semibold">{message}</div>}
+    <div className="p-4 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Badminton Court Booking</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input className="w-full border p-2" name="name" placeholder="Your Name" onChange={handleChange} required />
+        <input className="w-full border p-2" name="email" type="email" placeholder="Email" onChange={handleChange} required />
+        <input className="w-full border p-2" name="date" type="date" onChange={handleChange} required />
+        <select className="w-full border p-2" name="court" onChange={handleChange}>
+          <option value="1">Court 1</option>
+          <option value="2">Court 2</option>
+          <option value="3">Court 3</option>
+        </select>
+        <select className="w-full border p-2" name="startTime" onChange={handleChange}>
+          {[...Array(10)].map((_, i) => {
+            const hour = i + 14;
+            return <option key={hour} value={hour}>{hour}:00</option>;
+          })}
+        </select>
+        <select className="w-full border p-2" name="endTime" onChange={handleChange}>
+          {[...Array(10)].map((_, i) => {
+            const hour = i + 15;
+            return <option key={hour} value={hour}>{hour}:00</option>;
+          })}
+        </select>
+        <button className="bg-blue-500 text-white p-2 rounded" type="submit">Book</button>
+        {status && <p className="mt-2 text-sm">{status}</p>}
+      </form>
     </div>
   );
-}
+};
 
 export default App;
